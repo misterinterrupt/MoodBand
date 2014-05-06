@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE EML>
+<EML version="1.0" language="en_US">
+<sequence>
+<time value="0s15t">
+<contact_quality value="G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G" />
+<affectiv event="excitement_short_term" value="1" />
+<affectiv event=”excitement_long_term” value=”0.6” />
+</time>
+
+<time value="2s4t">
+<affectiv event="excitement_short_term" value="0.3" />
+<affectiv event="excitement_long_term" value="0.1" />
+<affectiv event="engagement_boredom" value="0.6" />
+</time>
+
+<time value="3s6t">
+<affectiv event="excitement_short_term" value="0.7" />
+<affectiv event="excitement_long_term" value="0.3" />
+<affectiv event="engagement_boredom" value="0.2" />
+<affectiv event="frustration" value="0.6" />
+</time> 
+
+<time value="4s3t">
+<affectiv event="excitement_short_term" value="0.9" />
+<affectiv event="excitement_long_term" value="0.6" />
+<affectiv event="engagement_boredom" value="0.6" />
+<affectiv event="frustration" value="0.4" />￼
+<affectiv event="meditation" value="0.4" />
+
+</time>
+</sequence>
