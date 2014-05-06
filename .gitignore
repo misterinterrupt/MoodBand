@@ -1,0 +1,19 @@
+# ignore common OS-specific metadata files
+.DS_Store
+desktop.ini
+Thumbs.db
+
+# node module dir
+node_modules/
+# Exuberant ctags files
+.tags
+
+
+# vim swapfiles
+*.swp
+*.swo
+
+# Maven targets
+android/target
+shared/target
+neural/target
