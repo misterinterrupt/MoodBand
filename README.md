@@ -1,3 +1,4 @@
- npm install
- node moodBandServer.js
+npm install
+
+node moodBandServer.js
  
