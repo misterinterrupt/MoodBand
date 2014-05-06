@@ -9,3 +9,5 @@ Follows this order of dominant emotions:
 	Meditation
 	Excitement
 
+ALTERNATIVELY FOR EMOSCRIPT
+emostate once per 31.25ms
