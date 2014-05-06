@@ -1,5 +1,5 @@
 var SerialPort = require("serialport").SerialPort
-var serialPort = new SerialPort("/dev/tty.usbserial-A102JUZE", {
+var serialPort = new SerialPort("/dev/tty.TinyBT-75D3-RNI-SPP", {
   baudrate: 57600
 }, true); // this is the openImmediately flag [default is true]
 
