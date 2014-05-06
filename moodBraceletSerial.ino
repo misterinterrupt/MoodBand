@@ -35,38 +35,15 @@ void setup() {
 
     //NeoPixel config
     strip.begin();
-    strip.setPixelColor(0,0,0,200); //Aliveness pixel
+    strip.setPixelColor(0,0,50,0); //Aliveness pixel
     strip.show(); // Initialize all pixels 
 }
 
 // main application loop
 void loop() {
   
-    // Get pixel data (no longer used)  
-  //  for(int pixel = 0; pixel < 12; pixel++)
-   // {
-   /*   for(int color = 0; color < 3; color++)
-      {
-        while(Serial.available() <= 0)
-        {}
-        byte incomingByte1 = Serial.read();
-        byte incomingByte2 = Serial.read();
-        //Serial.print(incomingByte1, DEC);
-        //Serial.println(incomingByte2, DEC);
-        int nowItsAnInt = incomingByte1*16+incomingByte2;
-        //Serial.println
-        // if(incomingByte 
-        pixRGB[pixel][color] = nowItsAnInt;
-      }*/
-  //  }
+    // Get emotion data 
     int emoArray[4] = {0,0,0,0};
-    
-    // Generate sample serial data
-//    Serial.println("Sample data (written):");
-//    Serial.write(255);
-//    Serial.write(200);
-//    Serial.write(100);
-//    Serial.write(50);
     
     for(int emo = 0; emo < 4; emo++)
     {
@@ -87,30 +64,31 @@ void loop() {
     float maxBright = 255.0;
     float brightScalar = (maxBright-minBright)/255.0;
     
-    // Note: neopixels are GRB, not RGB!
+    
+    // setPixelColor(pixel, R,G,B)
+    // red = frustration
     for(int pixel = 0; pixel < 3; pixel++)
     {
       strip.setPixelColor(pixel, emoArray[0]*brightScalar + minBright, 0, 0);
     }
-    for(int pixel = 0; pixel < 4; pixel++)
+    
+    // green = engagement
+    for(int pixel = 0; pixel < 3; pixel++)
     {
       strip.setPixelColor(pixel+3, 0, emoArray[1]*brightScalar + minBright,0);
     }
-    for(int pixel = 0; pixel < 4; pixel++)
+    
+    // blue = meditation
+    for(int pixel = 0; pixel < 3; pixel++)
     {
       strip.setPixelColor(pixel+6, 0, 0, emoArray[2]*brightScalar + minBright);
     }
-    for(int pixel = 0; pixel < 4; pixel++)
+    
+    // yellow = excitement
+    for(int pixel = 0; pixel < 3; pixel++)
     {
       strip.setPixelColor(pixel+9, emoArray[3]*brightScalar + minBright, emoArray[3]*brightScalar + minBright,0);
     }
 
-    
-
-    //Serial.println("Alive");
-    
-    // LED test
-    //  strip.setPixelColor(1, 30,30,255);
     strip.show();
 }
-
