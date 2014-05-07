@@ -24,8 +24,31 @@ var http = require('http'),
       "enableRawOutput": true,
       "format": "Json"
     },
-    sockBuffer = "",
-    socket = new net.connect(sockOpts);
+    sockBuffer = "";
+
+  var processBuffer = function processBuffer() {
+
+  }
+
+  var onSocketData = function onSocketConnect(data) {
+      var nextBuff = data.toString('utf-8');
+      sockBuffer += nextBuff;
+      var oneLine = processBuffer();
+      console.log(data.toString('ascii', 0, data.length));
+    },
+    onSocketConnect = function onSocketConnect() {
+      //'connect' listener
+      console.log('sock sniffed');
+      var configBuff = new Buffer(8);
+      var configString = JSON.stringify(sockAuth) + '\n' + JSON.stringify(sockOpts) + '\n';
+      console.log(configString);
+      configBuff.fill(configString);
+      socket.write(configBuff, "utf-8", function() { console.log("wrote configBuff"); console.log(arguments);});
+      socket.on('data', onSocketData);
+    };
+
+  var socket = new net.connect(sockOpts, onSocketConnect);
+
 
   var onSocketData = function onSocketConnect(data) {
       var nextBuff = data.toString('utf-8');
