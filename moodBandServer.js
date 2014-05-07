@@ -18,10 +18,10 @@ var http = require('http'),
     },
     sockAuth = {
       "appName": "MoodBand", 
-      "appKey": "MoodBand-FTW"
+      "appKey": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
     },
     sockParams = {
-      "enableRawOutput": true,
+      "enableRawOutput": false,
       "format": "Json"
     },
     sockBuffer = "";
@@ -30,40 +30,51 @@ var http = require('http'),
 
   }
 
-  var onSocketData = function onSocketConnect(data) {
-      var nextBuff = data.toString('utf-8');
-      sockBuffer += nextBuff;
-      var oneLine = processBuffer();
-      console.log(data.toString('ascii', 0, data.length));
+  var onSocketData = function onSocketData(data) {
+
+      var nextBuff = data.toString('ascii');
+      var packets = (sockBuffer + nextBuff).split("\r");
+      console.log(packets);
+      for(var i=0; i < packets.length; i++){
+        if(i === (packets.length - 1)) {
+          sockBuffer = packets[i];
+        } else {
+          console.log(JSON.parse(packets[i]));
+        }
+      }
     },
     onSocketConnect = function onSocketConnect() {
       //'connect' listener
       console.log('sock sniffed');
-      var configBuff = new Buffer(8);
-      var configString = JSON.stringify(sockAuth) + '\n' + JSON.stringify(sockOpts) + '\n';
-      console.log(configString);
-      configBuff.fill(configString);
-      socket.write(configBuff, "utf-8", function() { console.log("wrote configBuff"); console.log(arguments);});
+      var sockAuthString = JSON.stringify(sockAuth),
+          sockOptsString = JSON.stringify(sockOpts);
+
+
+      console.log(sockAuthString, Buffer.byteLength(sockAuthString,  'ascii'));
+      console.log(sockOptsString, Buffer.byteLength(sockOptsString,  'ascii'));
+      
+      var authBuff = new Buffer(Buffer.byteLength(sockAuthString, 'ascii'));
+      var optsBuff = new Buffer(Buffer.byteLength(sockOptsString, 'ascii'));
+
+
+      for(var i=0; i < sockAuthString.length; i++) {
+        authBuff.fill(sockAuthString.charAt(i), i);
+      }
+
+      for(var j=0; j < sockOptsString.length; j++) {
+        optsBuff.fill(sockOptsString.charAt(j), j);
+      }
+
+      console.log("authBuff: ", authBuff.toString('ascii', 0, authBuff.length));
+      console.log("optsBuff: ", optsBuff.toString('ascii', 0, optsBuff.length));
+      
+      socket.write(authBuff, "ascii", function() { console.log("wrote authBuff"); console.log(arguments);});
+      socket.write(optsBuff, "ascii", function() { console.log("wrote optsBuff"); console.log(arguments);});
       socket.on('data', onSocketData);
     };
 
   var socket = new net.connect(sockOpts, onSocketConnect);
 
-
-  var onSocketData = function onSocketConnect(data) {
-      var nextBuff = data.toString('utf-8');
-      sockBuffer += nextBuff;
-      //var oneLine = processBuffer();
-      console.log(nextBuff);
-    },
-    onSocketConnect = function onSocketConnect() {
-      //'connect' listener
-      console.log('sock sniffed');
-      socket.write(JSON.stringify(sockAuth), "utf-8");
-      socket.write(JSON.stringify(sockOpts), "utf-8");
-      socket.on('data', onSocketData);
-    };
-  socket.on('connect', onSocketConnect);
 
 var stateOfMind = {"attention": 0,
                    "meditation": 0, 
