@@ -39,6 +39,42 @@ var http = require('http'),
     };
   socket.on('connect', onSocketConnect);
 
+var stateOfMind = {"attention": 0, 
+                   "meditation": 0, 
+                   "bored": 0,
+                   "frust": 0,
+                   "med": 0,
+                   "excite": 0};
+
+function updateStateOfMind(var json) {
+  if (json.eSense.attention) {
+    stateOfMind.attention = json.eSense.attention;
+  }
+  if (json.eSense.meditation) {
+    stateOfMind.meditation = json.eSense.meditation;
+  }
+  if (json.bored) {
+    stateOfMind.bored = json.bored;
+  }
+  if (json.frust) {
+    stateOfMind.frust = json.frust;
+  }
+  if (json.med) {
+    stateOfMind.med = json.med;
+  }
+  if (json.excite) {
+    stateOfMind.excite = json.excite;
+  }
+}
+
+function pixelsFromMindwave() {
+  //pixel 0 shows the first pixel in the stack of attention pixels.
+  //pixel 36
+}
+
+function pixelsFromEmotiv() {
+  
+}
 
 var init = function () {
   console.log('serial port open at 57600');
@@ -49,21 +85,29 @@ var init = function () {
     path: '/neural',
     method: 'GET'
   };
-  var i = 0.0
+
 
   var onReqData = function(chunk) {
     var dat = JSON.parse(chunk);
-    dat.bored = ((i+= 0.1)%1);
-    dat.frust = ((i+= 0.1)%1);
-    dat.med = ((i+= 0.1)%1);
-    dat.excite = ((i+= 0.1)%1);
-    console.log(dat);
+    var rgbArray = [];
+    updateStateOfMind(dat);
+
+    // TODO matty
+    // if (data is coming from neurosky) {
+    //   rgbArray = pixelsFromMindwave();
+    // else if (data is coming from emotiv) {
+    //   rgbArray = emotivBrainUpdate(dat);
+    // }
+
     var buf = new Buffer(4);
+    /* no longer needed if we pass pixel colors right:
+    console.log(dat);
     buf.writeUInt8(Math.floor(dat.bored*255.), 0);
     buf.writeUInt8(Math.floor(dat.frust*255.), 1);
     buf.writeUInt8(Math.floor(dat.med*255.), 2);
     buf.writeUInt8(Math.floor(dat.excite*255.), 3);
     console.log(buf);
+    */
 
     // send serial data to arduino
     serialPort.write(buf, function(err, results) {
