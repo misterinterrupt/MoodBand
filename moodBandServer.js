@@ -27,6 +27,7 @@ var http = require('http'),
   var onSocketData = function onSocketConnect(data) {
       var nextBuff = data.toString('utf-8');
       sockBuffer += nextBuff;
+      //var oneLine = processBuffer();
       console.log(nextBuff);
     },
     onSocketConnect = function onSocketConnect() {
