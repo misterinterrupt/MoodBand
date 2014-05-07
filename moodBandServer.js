@@ -1,6 +1,6 @@
 //var SerialPort = require("serialport").SerialPort;
 // var serialPort = new SerialPort("/dev/tty.TinyBT-75D3-RNI-SPP", {
-//var serialPort = new SerialPort("/dev/tty.usbserial-A102JUZE", {
+//var serialPort = new SerialPort("/dev/tty.usbserial-A102JUY2", {
 //   baudrate: 57600
 //  }, true); // this is the openImmediately flag [default is true]
 
@@ -133,24 +133,21 @@ function pixelsFromEmotiv() {
   var medPx = 3 * stateOfMind.med;
   var excitePx = 3 * stateOfMind.excite;
 
-  for (var i = 0; i < boredPx; i++) {
+  for (var i = 0; i < 3; i++) {
     pixels[i * 3] = 0;
-    pixels[i * 3 + 1] = 255;
+    pixels[i * 3 + 1] = Math.floor(Math.max(10, stateOfMind.bored * 255));
     pixels[i * 3 + 2] = 0;
-  }
-  for (var i = 0; i < frustPx; i++) {
-    pixels[9 + i * 3] = 255;
+
+    pixels[9 + i * 3] = Math.floor(Math.max(10, stateOfMind.frust * 255));
     pixels[9 + i * 3 + 1] = 0;
     pixels[9 + i * 3 + 2] = 0;
-  }
-  for (var i = 0; i < medPx; i++) {
+
     pixels[18 + i * 3] = 0;
     pixels[18 + i * 3 + 1] = 0;
-    pixels[18 + i * 3 + 2] = 255;
-  }
-  for (var i = 0; i < excitePx; i++) {
-    pixels[27 + i * 3] = 127;
-    pixels[27 + i * 3 + 1] = 127;
+    pixels[18 + i * 3 + 2] = Math.floor(Math.max(10, stateOfMind.med * 255));
+ 
+    pixels[27 + i * 3] = Math.floor(Math.max(5, (stateOfMind.excite * 255) / 2));
+    pixels[27 + i * 3 + 1] = Math.floor(Math.max(5, (stateOfMind.excite * 255) / 2));
     pixels[27 + i * 3 + 2] = 0;
   }
 
@@ -178,7 +175,7 @@ var init = function () {
     method: 'GET'
   };
 
-
+  
   var onReqData = function(chunk) {
     var dat = JSON.parse(chunk);
     updateStateOfMind(dat);
