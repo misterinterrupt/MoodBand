@@ -2,7 +2,7 @@ import csv, math
 import random as r
 
 STEP_SIZE = 0.005
-COS_SCALE = 1.0
+COS_SCALE = .5
 STEPS_SEC = 20.
 
 filename = 'fakeEmotions.csv'
@@ -24,10 +24,9 @@ for x in xrange(0, ENDTIMES):
 	print x/STEPS_SEC , moods
 	csvwriter.writerow(moods)
 	for i in xrange(0,numMoods):
-		print moods[i], 
-		direction =  (1 if r.random() >= 0.5 else -1)
 		fracThruMyTurn = 1.0 * x * cycles / ENDTIMES
 		offsetForMood = (i+1.)/numMoods
+		direction =  (1 if math.cos((fracThruMyTurn + offsetForMood) * math.pi / 2) >= 0.5 else -1)
 
 		moods[i] = constrain(moods[i] + STEP_SIZE * direction + STEP_SIZE * COS_SCALE * math.cos((fracThruMyTurn  +  offsetForMood) * math.pi / 2), 0, 1.0)
 
