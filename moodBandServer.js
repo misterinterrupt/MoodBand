@@ -1,7 +1,8 @@
-// var SerialPort = require("serialport").SerialPort
+// var SerialPort = require("serialport").SerialPort;
 // var serialPort = new SerialPort("/dev/tty.TinyBT-75D3-RNI-SPP", {
+//  var serialPort = new SerialPort("/dev/tty.usbserial-A102JUZE", {
 //   baudrate: 57600
-// }, true); // this is the openImmediately flag [default is true]
+//  }, true); // this is the openImmediately flag [default is true]
 
 var headset = 'neurosky';
 
@@ -41,14 +42,14 @@ var http = require('http'),
     };
   socket.on('connect', onSocketConnect);
 
-var stateOfMind = {"attention": 0, 
-                   "meditation": 0, 
+var stateOfMind = {"attention": 0.5, 
+                   "meditation": 0.5, 
                    "bored": 0,
                    "frust": 0,
                    "med": 0,
                    "excite": 0};
 
-function updateStateOfMind(var json) {
+function updateStateOfMind(json) {
   // All values vary over (0, 1)
   if (json.eSense.attention) {
     stateOfMind.attention = json.eSense.attention / 100;
@@ -77,7 +78,7 @@ function pixelsFromMindwave() {
   //one pixel is always lit
   var pixels = [];
   var attentionPixels = 6 * stateOfMind.attention;
-  var meditationPixels = 6 * stateOfMind.meditation);
+  var meditationPixels = 6 * stateOfMind.meditation;
   for (var i = 0; i < attentionPixels; i++) {
     pixels[i * 3] = 127;
     pixels[i * 3 + 1] = 127;
@@ -116,7 +117,7 @@ function pixelsFromEmotiv() {
   for (var i = 0; i < excitePx; i++) {
     pixels[27 + i * 3] = 127;
     pixels[27 + i * 3 + 1] = 127;
-    pixels[27] + i * 3 + 2] = 0;
+    pixels[27 + i * 3 + 2] = 0;
   }
 
   /* TODO
