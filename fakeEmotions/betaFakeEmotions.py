@@ -2,7 +2,7 @@ import csv, math
 import random as r
 
 STEP_SIZE = 0.005
-COS_SCALE = .5
+COS_SCALE = .01
 STEPS_SEC = 20.
 
 filename = 'fakeEmotions.csv'
