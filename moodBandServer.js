@@ -47,11 +47,12 @@ var stateOfMind = {"attention": 0,
                    "excite": 0};
 
 function updateStateOfMind(var json) {
+  // All values vary over (0, 1)
   if (json.eSense.attention) {
-    stateOfMind.attention = json.eSense.attention;
+    stateOfMind.attention = json.eSense.attention / 100;
   }
   if (json.eSense.meditation) {
-    stateOfMind.meditation = json.eSense.meditation;
+    stateOfMind.meditation = json.eSense.meditation / 100;
   }
   if (json.bored) {
     stateOfMind.bored = json.bored;
@@ -69,7 +70,24 @@ function updateStateOfMind(var json) {
 
 function pixelsFromMindwave() {
   //pixel 0 shows the first pixel in the stack of attention pixels.
-  //pixel 36
+  //pixel 35 shows the first pixel in the stack of meditation pixels.
+  //pixel 15 is max attention, pixel 16 is max meditation
+  //attention is yellow, meditation is blue
+  //one pixel is always lit
+  var pixels = [];
+  var attentionPixels = 6 * stateOfMind.attention;
+  var meditationPixels = 6 * stateOfMind.meditation);
+  for (var i = 0; i < attentionPixels; i++) {
+    pixels[i * 3] = 200;
+    pixels[i * 3 + 1] = 200;
+    pixels[i * 3 + 2] = 0;
+  }
+  for (var i = 0; i < meditationPixels; i++) {
+    pixels[33 - i * 3] = 0;
+    pixels[34 - i * 3] = 0;
+    pixels[35 - i * 3] = 100;
+  }
+  return pixels;
 }
 
 function pixelsFromEmotiv() {
