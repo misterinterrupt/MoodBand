@@ -1,10 +1,11 @@
-//var SerialPort = require("serialport").SerialPort;
+var SerialPort = require("serialport").SerialPort;
 // var serialPort = new SerialPort("/dev/tty.TinyBT-75D3-RNI-SPP", {
-//var serialPort = new SerialPort("/dev/tty.usbserial-A102JUY2", {
-//   baudrate: 57600
-//  }, true); // this is the openImmediately flag [default is true]
+var serialPort = new SerialPort("/dev/tty.usbserial-A102JUY2", {
+   baudrate: 57600
+  }, true); // this is the openImmediately flag [default is true]
 
-var headset = 'neurosky';
+var headset = 'emotiv';
+var demomode = true;
 
 var http = require('http'),
     net = require('net'),
@@ -25,11 +26,11 @@ var http = require('http'),
       "format": "Json"
     },
     sockBuffer = "";
-
+/*
   var processBuffer = function processBuffer() {
 
-  }
-
+  }*/
+                                                                                              
   var onSocketData = function onSocketData(data) {
 
       var sockOptsString = JSON.stringify(sockParams);
@@ -65,7 +66,6 @@ var http = require('http'),
 
 
       console.log(sockAuthString, Buffer.byteLength(sockAuthString, 'ascii'));
-      
       var authBuff = new Buffer(Buffer.byteLength(sockAuthString, 'ascii'));
 
 
@@ -73,30 +73,28 @@ var http = require('http'),
         authBuff.fill(sockAuthString.charAt(i), i);
       }
 
-
       console.log("authBuff: ", authBuff.toString('ascii', 0, authBuff.length));
       
       socket.write(authBuff, "ascii", function() { console.log("wrote authBuff"); console.log(arguments);});
       socket.on('data', onSocketData);
     };
 
-  var socket = new net.connect(sockOpts, onSocketConnect);
-
-
 var stateOfMind = {"attention": 0,
                    "meditation": 0, 
-                   "bored": 0,
-                   "frust": 0,
-                   "med": 0,
-                   "excite": 0};
+                   "bored": .5,
+                   "frust": .25,
+                   "med": .8,
+                   "excite": .2};
 
 function updateStateOfMind(json) {
   // All values vary over (0, 1)
-  if (json.eSense.attention) {
-    stateOfMind.attention = json.eSense.attention / 100;
-  }
-  if (json.eSense.meditation) {
-    stateOfMind.meditation = json.eSense.meditation / 100;
+  if(json.eSense){
+    if (json.eSense.attention) {
+      stateOfMind.attention = json.eSense.attention / 100;
+    }
+    if (json.eSense.meditation) {
+      stateOfMind.meditation = json.eSense.meditation / 100;
+    }
   }
   if (json.bored) {
     stateOfMind.bored = json.bored;
@@ -131,6 +129,15 @@ function pixelsFromMindwave() {
     pixels[35 - i * 3] = 255;
   }
   return pixels;
+}
+
+function pixelsOff() {
+  return [0,0,0,0,0,0,
+          0,0,0,0,0,0,
+          0,0,0,0,0,0,
+          0,0,0,0,0,0,
+          0,0,0,0,0,0,
+          0,0,0,0,0,0]
 }
 
 function pixelsFromEmotiv() {
@@ -182,7 +189,38 @@ var init = function () {
     method: 'GET'
   };
 
-  
+  function allThePixelThings() {
+
+    var rgbArray; // will be 36 long for the 12px face
+    if (headset === 'neurosky') { //hardcoded at top
+      rgbArray = pixelsFromMindwave();
+    } else if (headset === 'emotiv') {
+      rgbArray = pixelsFromEmotiv();
+    } else if (headset == 'off') {
+      rgbArray = pixelsOff();
+    }
+
+    var buf = new Buffer(36);
+    for (var i = 0; i < 36; i++) {
+      if (rgbArray[i]) {
+        // console.log("about to put " + rgbArray[i] + " in a buffer");
+        buf.writeUInt8(rgbArray[i], i);
+      } else {
+        // console.log("about to put " + 0 + " in a buffer");
+        buf.writeUInt8(0, i);
+      }
+    }
+
+    // send serial data to arduino
+    serialPort.write(buf, function(err, results) {
+      console.log('err ' + err);
+      console.log('results ' + results);
+    });
+
+    setTimeout(makeRequest, 0);
+
+  }
+
   var onReqData = function(chunk) {
     var dat = JSON.parse(chunk);
     updateStateOfMind(dat);
@@ -211,7 +249,7 @@ var init = function () {
       console.log('results ' + results);
     });
 
-    setTimeout(makeRequest, 0);
+    setTimeout(makeRequest, 50);
   };
 
   var reqCallback = function(res){
@@ -221,6 +259,10 @@ var init = function () {
     res.on('data', onReqData);
   };
 
+  function constrain(a,n,x){
+    return (a <= n ? n : (a >= x ? x : a));
+  }
+
   function makeRequest() {
     var req = http.request(options, reqCallback);
 
@@ -228,10 +270,18 @@ var init = function () {
       console.log('problem with request: ' + e.message);
     });
     req.end();
+    if(demomode) {
+      onReqData("{\"attention\": " + constrain(stateOfMind.attention + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," + 
+                     "\"meditation\": " + constrain(stateOfMind.meditation + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," + 
+                     "\"bored\": " + constrain(stateOfMind.bored + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," +
+                     "\"frust\": " + constrain(stateOfMind.frust + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," +
+                     "\"med\": " + constrain(stateOfMind.med + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," +
+                     "\"excite\": " + constrain(stateOfMind.excite + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "}")
+    }
   }
 
   // makeRequest();
 
 };
 
-//serialPort.open(init, false);
+serialPort.open(init, false);
