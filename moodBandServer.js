@@ -1,16 +1,47 @@
-var SerialPort = require("serialport").SerialPort
-var serialPort = new SerialPort("/dev/tty.TinyBT-75D3-RNI-SPP", {
-  baudrate: 57600
-}, true); // this is the openImmediately flag [default is true]
+// var SerialPort = require("serialport").SerialPort
+// var serialPort = new SerialPort("/dev/tty.TinyBT-75D3-RNI-SPP", {
+//   baudrate: 57600
+// }, true); // this is the openImmediately flag [default is true]
 
+var http = require('http'),
+    net = require('net'),
+    serverIP = '10.0.1.86',
+    socketIP = '127.0.0.1',
+    serverPort = '80',
+    socketPort = '13854',
+    sockOpts = {
+      host:socketIP,
+      port:socketPort
+    },
+    sockAuth = {
+      "appName": "MoodBand", 
+      "appKey": "MoodBand-FTW"
+    },
+    sockParams = {
+      "enableRawOutput": true,
+      "format": "Json"
+    },
+    sockBuffer = "",
+    socket = new net.connect(sockOpts);
+
+  var onSocketData = function onSocketConnect(data) {
+      var nextBuff = data.toString('utf-8');
+      sockBuffer += nextBuff;
+      //var oneLine = processBuffer();
+      console.log(nextBuff);
+    },
+    onSocketConnect = function onSocketConnect() {
+      //'connect' listener
+      console.log('sock sniffed');
+      socket.write(JSON.stringify(sockAuth), "utf-8");
+      socket.write(JSON.stringify(sockOpts), "utf-8");
+      socket.on('data', onSocketData);
+    };
+  socket.on('connect', onSocketConnect);
 
 
 var init = function () {
   console.log('serial port open at 57600');
-
-  var http = require('http');
-
-  var serverIP = '10.0.1.86';
 
   var options = {
     hostname: serverIP,
@@ -59,8 +90,8 @@ var init = function () {
     req.end();
   }
 
-  makeRequest();
+  // makeRequest();
 
 };
 
-serialPort.open(init, false);
+//serialPort.open(init, false);
