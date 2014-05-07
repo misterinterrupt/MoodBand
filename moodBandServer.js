@@ -21,7 +21,7 @@ var http = require('http'),
       "appKey": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
     },
     sockParams = {
-      "enableRawOutput": false,
+      "enableRawOutput": "true",
       "format": "Json"
     },
     sockBuffer = "";
@@ -32,44 +32,51 @@ var http = require('http'),
 
   var onSocketData = function onSocketData(data) {
 
+      var sockOptsString = JSON.stringify(sockParams);
+      console.log(sockOptsString, Buffer.byteLength(sockOptsString, 'ascii'));
+      var optsBuff = new Buffer(Buffer.byteLength(sockOptsString, 'ascii'));
+      for(var j=0; j < sockOptsString.length; j++) {
+        optsBuff.fill(sockOptsString.charAt(j), j);
+      }
+      console.log("optsBuff: ", optsBuff.toString('ascii', 0, optsBuff.length));
+      socket.write(optsBuff, "ascii", function() { console.log("wrote optsBuff"); console.log(arguments);});
+
       var nextBuff = data.toString('ascii');
       var packets = (sockBuffer + nextBuff).split("\r");
       console.log(packets);
-      for(var i=0; i < packets.length; i++){
-        if(i === (packets.length - 1)) {
+      
+      for(var i=0; i < packets.length; i++) {
+        if((packets.length > 0) && (i === (packets.length - 1))) {
           sockBuffer = packets[i];
-        } else {
-          console.log(JSON.parse(packets[i]));
+          console.log("next");
         }
+          try {
+            console.log(JSON.parse(packets[i]));
+          } catch(e) {
+
+          }
+      
       }
     },
     onSocketConnect = function onSocketConnect() {
       //'connect' listener
       console.log('sock sniffed');
-      var sockAuthString = JSON.stringify(sockAuth),
-          sockOptsString = JSON.stringify(sockOpts);
+      var sockAuthString = JSON.stringify(sockAuth);
 
 
-      console.log(sockAuthString, Buffer.byteLength(sockAuthString,  'ascii'));
-      console.log(sockOptsString, Buffer.byteLength(sockOptsString,  'ascii'));
+      console.log(sockAuthString, Buffer.byteLength(sockAuthString, 'ascii'));
       
       var authBuff = new Buffer(Buffer.byteLength(sockAuthString, 'ascii'));
-      var optsBuff = new Buffer(Buffer.byteLength(sockOptsString, 'ascii'));
 
 
       for(var i=0; i < sockAuthString.length; i++) {
         authBuff.fill(sockAuthString.charAt(i), i);
       }
 
-      for(var j=0; j < sockOptsString.length; j++) {
-        optsBuff.fill(sockOptsString.charAt(j), j);
-      }
 
       console.log("authBuff: ", authBuff.toString('ascii', 0, authBuff.length));
-      console.log("optsBuff: ", optsBuff.toString('ascii', 0, optsBuff.length));
       
       socket.write(authBuff, "ascii", function() { console.log("wrote authBuff"); console.log(arguments);});
-      socket.write(optsBuff, "ascii", function() { console.log("wrote optsBuff"); console.log(arguments);});
       socket.on('data', onSocketData);
     };
 
