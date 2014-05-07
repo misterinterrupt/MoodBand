@@ -1,6 +1,6 @@
-// var SerialPort = require("serialport").SerialPort;
+//var SerialPort = require("serialport").SerialPort;
 // var serialPort = new SerialPort("/dev/tty.TinyBT-75D3-RNI-SPP", {
-//  var serialPort = new SerialPort("/dev/tty.usbserial-A102JUZE", {
+//var serialPort = new SerialPort("/dev/tty.usbserial-A102JUZE", {
 //   baudrate: 57600
 //  }, true); // this is the openImmediately flag [default is true]
 
@@ -65,8 +65,8 @@ var http = require('http'),
     };
   socket.on('connect', onSocketConnect);
 
-var stateOfMind = {"attention": 0.5, 
-                   "meditation": 0.5, 
+var stateOfMind = {"attention": 0,
+                   "meditation": 0, 
                    "bored": 0,
                    "frust": 0,
                    "med": 0,
@@ -158,6 +158,7 @@ function pixelsFromEmotiv() {
 
 var init = function () {
   console.log('serial port open at 57600');
+  allThePixelThings();
 
   var options = {
     hostname: serverIP,
@@ -179,8 +180,14 @@ var init = function () {
     }
 
     var buf = new Buffer(36);
-    for (var i = 0; i < rgbArray.length; i++) {
-      buf.writeUInt8(rgbArray[i], i);
+    for (var i = 0; i < 36; i++) {
+      if (rgbArray[i]) {
+        console.log("about to put " + rgbArray[i] + " in a buffer");
+        buf.writeUInt8(rgbArray[i], i);
+      } else {
+        console.log("about to put " + 0 + " in a buffer");
+        buf.writeUInt8(0, i);
+      }
     }
 
     // send serial data to arduino
