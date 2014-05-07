@@ -3,6 +3,8 @@
 //   baudrate: 57600
 // }, true); // this is the openImmediately flag [default is true]
 
+var headset = 'neurosky';
+
 var http = require('http'),
     net = require('net'),
     serverIP = '10.0.1.86',
@@ -69,29 +71,65 @@ function updateStateOfMind(var json) {
 }
 
 function pixelsFromMindwave() {
-  //pixel 0 shows the first pixel in the stack of attention pixels.
-  //pixel 35 shows the first pixel in the stack of meditation pixels.
-  //pixel 15 is max attention, pixel 16 is max meditation
+  //pixel 0: first pixel in attention meter (px 15 is max)
+  //pixel 35: first pixel in meditation meter (px 16 is max)
   //attention is yellow, meditation is blue
   //one pixel is always lit
   var pixels = [];
   var attentionPixels = 6 * stateOfMind.attention;
   var meditationPixels = 6 * stateOfMind.meditation);
   for (var i = 0; i < attentionPixels; i++) {
-    pixels[i * 3] = 200;
-    pixels[i * 3 + 1] = 200;
+    pixels[i * 3] = 127;
+    pixels[i * 3 + 1] = 127;
     pixels[i * 3 + 2] = 0;
   }
   for (var i = 0; i < meditationPixels; i++) {
     pixels[33 - i * 3] = 0;
     pixels[34 - i * 3] = 0;
-    pixels[35 - i * 3] = 100;
+    pixels[35 - i * 3] = 255;
   }
   return pixels;
 }
 
 function pixelsFromEmotiv() {
-  
+  var pixels = []
+  var boredPx = 3 * stateOfMind.bored;
+  var frustPx = 3 * stateOfMind.frust;
+  var medPx = 3 * stateOfMind.med;
+  var excitePx = 3 * stateOfMind.excite;
+
+  for (var i = 0; i < boredPx; i++) {
+    pixels[i * 3] = 0;
+    pixels[i * 3 + 1] = 255;
+    pixels[i * 3 + 2] = 0;
+  }
+  for (var i = 0; i < frustPx; i++) {
+    pixels[9 + i * 3] = 255;
+    pixels[9 + i * 3 + 1] = 0;
+    pixels[9 + i * 3 + 2] = 0;
+  }
+  for (var i = 0; i < medPx; i++) {
+    pixels[18 + i * 3] = 0;
+    pixels[18 + i * 3 + 1] = 0;
+    pixels[18 + i * 3 + 2] = 255;
+  }
+  for (var i = 0; i < excitePx; i++) {
+    pixels[27 + i * 3] = 127;
+    pixels[27 + i * 3 + 1] = 127;
+    pixels[27] + i * 3 + 2] = 0;
+  }
+
+  /* TODO
+  no longer needed if we pass pixel colors right:
+  console.log(dat);
+  buf.writeUInt8(Math.floor(dat.bored*255.), 0);
+  buf.writeUInt8(Math.floor(dat.frust*255.), 1);
+  buf.writeUInt8(Math.floor(dat.med*255.), 2);
+  buf.writeUInt8(Math.floor(dat.excite*255.), 3);
+  console.log(buf);
+  */
+
+  return pixels;
 }
 
 var init = function () {
@@ -107,25 +145,19 @@ var init = function () {
 
   var onReqData = function(chunk) {
     var dat = JSON.parse(chunk);
-    var rgbArray = [];
     updateStateOfMind(dat);
 
-    // TODO matty
-    // if (data is coming from neurosky) {
-    //   rgbArray = pixelsFromMindwave();
-    // else if (data is coming from emotiv) {
-    //   rgbArray = emotivBrainUpdate(dat);
-    // }
+    var rgbArray; // will be 36 long for the 12px face
+    if (headset === 'neurosky') { //hardcoded at top
+      rgbArray = pixelsFromMindwave();
+    } else if (headset === 'emotiv') {
+      rgbArray = pixelsFromEmotiv();
+    }
 
-    var buf = new Buffer(4);
-    /* no longer needed if we pass pixel colors right:
-    console.log(dat);
-    buf.writeUInt8(Math.floor(dat.bored*255.), 0);
-    buf.writeUInt8(Math.floor(dat.frust*255.), 1);
-    buf.writeUInt8(Math.floor(dat.med*255.), 2);
-    buf.writeUInt8(Math.floor(dat.excite*255.), 3);
-    console.log(buf);
-    */
+    var buf = new Buffer(36);
+    for (var i = 0; i < rgbArray.length; i++) {
+      buf.writeUInt8(rgbArray[i], i);
+    }
 
     // send serial data to arduino
     serialPort.write(buf, function(err, results) {
