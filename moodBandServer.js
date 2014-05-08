@@ -21,62 +21,183 @@ var http = require('http'),
       "appKey": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
     },
     sockParams = {
-      "enableRawOutput": "true",
+      "enableRawOutput": true,
       "format": "Json"
     },
-    sockBuffer = "";
+    lastBuffer,
+    nextBuffer;
 
-  var processBuffer = function processBuffer() {
+var SYNC_BYTE = 0xaa,
+    EXCODE_BYTE = 0x55,
+    POOR_SIGNAL_BYTE = 0x02,
+    ATTENTION_BYTE = 0x04,
+    MEDITATION_BYTE = 0x05,
+    BLINK_STRENGTH_BYTE = 0x16,
+    RAW_EEG_BYTE = 0x80,
+    ASIC_EEG_BYTE = 0x83;
+
+  var processBuffer = function processBuffer(rawData) {
+
+    var rawEegTimeSent = (new Date()).getTime();
+    var payLoadLength, packet, checkSum, checkSumExpected, parsedData, rawEeg, eegTick,
+        payLoad, extendedCodeLevel, code, bytesParsed, dataLength, dataValue;
+
+    for (var i = 0, l = rawData.length; i < l; i++) {
+
+      if (typeof rawData[i] === 'undefined' || typeof rawData[i+1] === 'undefined' || typeof rawData[i+2] === 'undefined') {
+        return;
+      }
+
+      payLoadLength = parseInt(rawData[i+2],10);
+      if (rawData[i] === SYNC_BYTE && rawData[i+1] === SYNC_BYTE && payLoadLength < 170) {
+
+        packet = rawData.slice(i, i + payLoadLength + 4);
+        checkSumExpected = packet[packet.length - 1];
+        payLoad = packet.slice(3, -1);
+        checkSum = 0;
+        payLoad = payLoad.toJSON();
+        payLoad.forEach(function(e) { checkSum += e });
+        checkSum &= 0xFF;
+        checkSum = ~checkSum & 0xFF;
+
+        console.log('checkSum: ', checkSum);
+        console.log('checkSumExpected: ', checkSumExpected);
+        if (checkSum === checkSumExpected) {
+          bytesParsed = 0;
+          parsedData = {};
+          while (bytesParsed < payLoadLength) {
+            extendedCodeLevel = 0;
+            while( payLoad[bytesParsed] === EXCODE_BYTE ) {
+              extendedCodeLevel++; bytesParsed++;
+            }
+            code = payLoad[bytesParsed++];
+
+            dataLength = code & 0x80 ? payLoad[bytesParsed++] : 1;
+            if (dataLength === 1) {
+              dataValue = payLoad[bytesParsed];
+            }
+            else {
+              dataValue = [];
+              for(var j = 0; j < dataLength; j++ ) {
+                dataValue.push(payLoad[bytesParsed + j]);
+              }
+            }
+            bytesParsed += dataLength;
+
+            if (extendedCodeLevel === 0) {
+              switch (code) {
+                case POOR_SIGNAL_BYTE:
+                  parsedData.poorSignal = dataValue;
+                  break;
+                case ATTENTION_BYTE:
+                  parsedData.attention = dataValue;
+                  break;
+                case MEDITATION_BYTE:
+                  parsedData.meditation = dataValue;
+                  break;
+                case BLINK_STRENGTH_BYTE:
+                  parsedData.blinkStrength = dataValue;
+                  break;
+                case RAW_EEG_BYTE:
+                  eegTick = (new Date()).getTime()
+                  if (eegTick - rawEegTimeSent > 200){
+                    rawEegTimeSent = eegTick;
+                    rawEeg = dataValue[0] * 256 + dataValue[1];
+                    rawEeg = rawEeg >=32768 ? rawEeg - 65536 : rawEeg;
+                    parsedData.rawEeg = rawEeg;
+                  }
+                  break;
+                case ASIC_EEG_BYTE:
+                  parsedData.delta = dataValue[0] * 256 * 256 + dataValue[1] * 256 + dataValue[2];
+                  parsedData.theta = dataValue[3] * 256 * 256 + dataValue[4] * 256 + dataValue[5];
+                  parsedData.lowAlpha = dataValue[6] * 256 * 256 + dataValue[7] * 256 + dataValue[8];
+                  parsedData.highAlpha = dataValue[9] * 256 * 256 + dataValue[10] * 256 + dataValue[11];
+                  parsedData.lowBeta = dataValue[12] * 256 * 256 + dataValue[13] * 256 + dataValue[14];
+                  parsedData.highBeta = dataValue[15] * 256 * 256 + dataValue[16] * 256 + dataValue[17];
+                  parsedData.lowGamma = dataValue[18] * 256 * 256 + dataValue[19] * 256 + dataValue[20];
+                  parsedData.highGamma = dataValue[21] * 256 * 256 + dataValue[22] * 256 + dataValue[23];
+                  break;
+                default:
+                  break;
+
+              }
+            }
+          }
+
+          if (Object.keys(parsedData).length) {
+            console.log('data', parsedData);
+          }
+
+        }
+
+        i = i + payLoadLength + 3;
+      }
+
+    }
 
   }
 
   var onSocketData = function onSocketData(data) {
-
-      var sockOptsString = JSON.stringify(sockParams);
-      console.log(sockOptsString, Buffer.byteLength(sockOptsString, 'ascii'));
-      var optsBuff = new Buffer(Buffer.byteLength(sockOptsString, 'ascii'));
-      for(var j=0; j < sockOptsString.length; j++) {
-        optsBuff.fill(sockOptsString.charAt(j), j);
-      }
-      console.log("optsBuff: ", optsBuff.toString('ascii', 0, optsBuff.length));
-      socket.write(optsBuff, "ascii", function() { console.log("wrote optsBuff"); console.log(arguments);});
-
-      var nextBuff = data.toString('ascii');
-      var packets = (sockBuffer + nextBuff).split("\r");
-      console.log(packets);
       
-      for(var i=0; i < packets.length; i++) {
-        if((packets.length > 0) && (i === (packets.length - 1))) {
-          sockBuffer = packets[i];
-          console.log("next");
+      // var sockOptsString = JSON.stringify(sockParams);
+      // console.log(sockOptsString, sockOptsString.length);
+      // var optsBuff = new Buffer(sockOptsString.length);
+      // for(var k=0; k < sockOptsString.length; k++) {
+      //   optsBuff[k]= sockOptsString.charCodeAt(k);
+      // }
+      // console.log("optsBuff: ", optsBuff);
+      // socket.write(optsBuff);
+
+      console.log(data);
+      // stuff to add to the last one or garbage
+      // stuff that is in the next one
+      var last2Sync = null;
+      for(var i=0; i < data.length; i++) {
+        // if we see a double sync
+        if(data[i] === SYNC_BYTE && data[i+1] === SYNC_BYTE) {
+          last2Sync = i;
         }
-          try {
-            console.log(JSON.parse(packets[i]));
-          } catch(e) {
+      } 
 
+      // if the last sync bytes were at the beginning, save the whole thing as the last buffer
+      if(last2Sync === 0) {
+        lastBuffer = data;
+        return
+      }
+      // if there were no sync bytes, make one buffer and concat it to the last buffer
+      if(last2Sync === null) {
+        lastBuffer = lastBuffer.concat(data);
+        return;
+      }
+      // make two or more buffers from splitting on any sync bytes
+      var splitskies = data.split(last2Sync);
+      // if there are 2 buffers, concat the first to the last buffer and parse it
+      if(splitskies.length > 1) {
+        for(var j=0; j<splitskies.length; j++) {
+          if(j===0) {
+            lastBuffer = lastBuffer.concat(splitskies[j]);
+            processBuffer(lastBuffer);
           }
-      
+          // save the last one in the next buffer
+          if(j===splitskies.length-1) {
+            nextBuffer = splitskies[j];
+          }
+          // other (probably smaller) packets should be processed
+          processBuffer(splitskies[j]);
+        }
       }
     },
     onSocketConnect = function onSocketConnect() {
       //'connect' listener
-      console.log('sock sniffed');
-      var sockAuthString = JSON.stringify(sockAuth);
-
-
-      console.log(sockAuthString, Buffer.byteLength(sockAuthString, 'ascii'));
-      
-      var authBuff = new Buffer(Buffer.byteLength(sockAuthString, 'ascii'));
-
-
-      for(var i=0; i < sockAuthString.length; i++) {
-        authBuff.fill(sockAuthString.charAt(i), i);
-      }
-
-
-      console.log("authBuff: ", authBuff.toString('ascii', 0, authBuff.length));
-      
-      socket.write(authBuff, "ascii", function() { console.log("wrote authBuff"); console.log(arguments);});
+      console.log('sock sniffed / connected :: args :: ', arguments);
+      // var sockAuthString = JSON.stringify(sockAuth);
+      // console.log(sockAuthString, sockAuthString.length);
+      // var authBuff = new Buffer(sockAuthString.length);
+      // for(var i=0; i < sockAuthString.length; i++) {
+      //   authBuff[i] = sockAuthString.charCodeAt(i);
+      // }
+      // console.log("authBuff: ", authBuff.toString('ascii', 0, authBuff.length));
+      // socket.write(authBuff, "utf8", function() { console.log("wrote authBuff"); console.log(arguments);});
       socket.on('data', onSocketData);
     };
 
