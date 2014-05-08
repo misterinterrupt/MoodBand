@@ -4,80 +4,74 @@ var serialPort = new SerialPort("/dev/tty.usbserial-A102JUY2", {
    baudrate: 57600
   }, true); // this is the openImmediately flag [default is true]
 
-var headset = 'emotiv';
-var demomode = true;
+var headset = 'neurosky';
+var demomode = false;
 
-var http = require('http'),
-    net = require('net'),
-    serverIP = '10.0.1.86',
-    socketIP = '127.0.0.1',
-    serverPort = '80',
-    socketPort = '13854',
-    sockOpts = {
+var http = require('http')
+var net = require('net')
+var serverIP = '10.0.1.86'
+var socketIP = '127.0.0.1'
+var serverPort = '80'
+var socketPort = '13854'
+var sockOpts = {
       host:socketIP,
       port:socketPort
-    },
-    sockAuth = {
+    }
+var sockAuth = {
       "appName": "MoodBand", 
       "appKey": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
-    },
-    sockParams = {
+    }
+var sockParams = {
       "enableRawOutput": "true",
       "format": "Json"
-    },
-    sockBuffer = "";
-/*
-  var processBuffer = function processBuffer() {
-
-  }*/
+    }
+var sockBuffer = ""
                                                                                               
-  var onSocketData = function onSocketData(data) {
+var onSocketData = function onSocketData(data) {
+  console.log("onSOcketData Entered")
+  var sockOptsString = JSON.stringify(sockParams);
+  console.log(sockOptsString, Buffer.byteLength(sockOptsString, 'ascii'));
+  var optsBuff = new Buffer(Buffer.byteLength(sockOptsString, 'ascii'));
+  for(var j=0; j < sockOptsString.length; j++) {
+    optsBuff.fill(sockOptsString.charAt(j), j);
+  }
+  console.log("optsBuff: ", optsBuff.toString('ascii', 0, optsBuff.length));
+  socket.write(optsBuff, "ascii", function() { console.log("wrote optsBuff"); console.log(arguments);});
 
-      var sockOptsString = JSON.stringify(sockParams);
-      console.log(sockOptsString, Buffer.byteLength(sockOptsString, 'ascii'));
-      var optsBuff = new Buffer(Buffer.byteLength(sockOptsString, 'ascii'));
-      for(var j=0; j < sockOptsString.length; j++) {
-        optsBuff.fill(sockOptsString.charAt(j), j);
-      }
-      console.log("optsBuff: ", optsBuff.toString('ascii', 0, optsBuff.length));
-      socket.write(optsBuff, "ascii", function() { console.log("wrote optsBuff"); console.log(arguments);});
+  var nextBuff = data.toString('ascii');
+  var packets = (sockBuffer + nextBuff).split("\r");
+  console.log(packets);
+    
+  console.log(sockAuthString, Buffer.byteLength(sockAuthString, 'ascii'));
+  var authBuff = new Buffer(Buffer.byteLength(sockAuthString, 'ascii'));
+    
+  for(var i=0; i < packets.length; i++) {
+    if((packets.length > 0) && (i === (packets.length - 1))) {
+      sockBuffer = packets[i];
+      console.log("next");
+    }
+      try {
+	console.log(JSON.parse(packets[i]));
+      } catch(e) {
+	
+      } 
+    }
+  }
 
-      var nextBuff = data.toString('ascii');
-      var packets = (sockBuffer + nextBuff).split("\r");
-      console.log(packets);
-      
-      for(var i=0; i < packets.length; i++) {
-        if((packets.length > 0) && (i === (packets.length - 1))) {
-          sockBuffer = packets[i];
-          console.log("next");
-        }
-          try {
-            console.log(JSON.parse(packets[i]));
-          } catch(e) {
+var onSocketConnect = function onSocketConnect() {
+  //'connect' listener
+  console.log('sock sniffed');
+  var sockAuthString = JSON.stringify(sockAuth);
 
-          }
-      
-      }
-    },
-    onSocketConnect = function onSocketConnect() {
-      //'connect' listener
-      console.log('sock sniffed');
-      var sockAuthString = JSON.stringify(sockAuth);
+  console.log(sockAuthString, Buffer.byteLength(sockAuthString, 'ascii'));
+  
+  var authBuff = new Buffer(Buffer.byteLength(sockAuthString, 'ascii'));
 
-
-      console.log(sockAuthString, Buffer.byteLength(sockAuthString, 'ascii'));
-      var authBuff = new Buffer(Buffer.byteLength(sockAuthString, 'ascii'));
-
-
-      for(var i=0; i < sockAuthString.length; i++) {
-        authBuff.fill(sockAuthString.charAt(i), i);
-      }
-
-      console.log("authBuff: ", authBuff.toString('ascii', 0, authBuff.length));
-      
-      socket.write(authBuff, "ascii", function() { console.log("wrote authBuff"); console.log(arguments);});
-      socket.on('data', onSocketData);
-    };
+  console.log("authBuff: ", authBuff.toString('ascii', 0, authBuff.length));
+    
+  socket.write(authBuff, "ascii", function() { console.log("wrote authBuff"); console.log(arguments);});
+  socket.on('data', onSocketData);
+  }
 
 var stateOfMind = {"attention": 0,
                    "meditation": 0, 
@@ -87,6 +81,7 @@ var stateOfMind = {"attention": 0,
                    "excite": .2};
 
 function updateStateOfMind(json) {
+  console.log("updateStateOfMind Entered")
   // All values vary over (0, 1)
   if(json.eSense){
     if (json.eSense.attention) {
@@ -180,7 +175,6 @@ function pixelsFromEmotiv() {
 
 var init = function () {
   console.log('serial port open at 57600');
-  allThePixelThings();
 
   var options = {
     hostname: serverIP,
@@ -189,99 +183,71 @@ var init = function () {
     method: 'GET'
   };
 
-  function allThePixelThings() {
+var onReqData = function(chunk) {
+  console.log("reqData Entered")
+  var dat = JSON.parse(chunk);
+  updateStateOfMind(dat);
 
-    var rgbArray; // will be 36 long for the 12px face
-    if (headset === 'neurosky') { //hardcoded at top
-      rgbArray = pixelsFromMindwave();
-    } else if (headset === 'emotiv') {
-      rgbArray = pixelsFromEmotiv();
-    } else if (headset == 'off') {
-      rgbArray = pixelsOff();
-    }
-
-    var buf = new Buffer(36);
-    for (var i = 0; i < 36; i++) {
-      if (rgbArray[i]) {
-        // console.log("about to put " + rgbArray[i] + " in a buffer");
-        buf.writeUInt8(rgbArray[i], i);
-      } else {
-        // console.log("about to put " + 0 + " in a buffer");
-        buf.writeUInt8(0, i);
-      }
-    }
-
-    // send serial data to arduino
-    serialPort.write(buf, function(err, results) {
-      console.log('err ' + err);
-      console.log('results ' + results);
-    });
-
-    setTimeout(makeRequest, 0);
-
+  var rgbArray; // will be 36 long for the 12px face
+  if (headset === 'neurosky') { //hardcoded at top
+    rgbArray = pixelsFromMindwave();
+  } else if (headset === 'emotiv') {
+    rgbArray = pixelsFromEmotiv();
+  } else if (headset == 'off') {
+    rgbArray = pixelsOff();
   }
 
-  var onReqData = function(chunk) {
-    var dat = JSON.parse(chunk);
-    updateStateOfMind(dat);
-
-    var rgbArray; // will be 36 long for the 12px face
-    if (headset === 'neurosky') { //hardcoded at top
-      rgbArray = pixelsFromMindwave();
-    } else if (headset === 'emotiv') {
-      rgbArray = pixelsFromEmotiv();
-    }
-
-    var buf = new Buffer(36);
-    for (var i = 0; i < 36; i++) {
-      if (rgbArray[i]) {
-        console.log("about to put " + rgbArray[i] + " in a buffer");
-        buf.writeUInt8(rgbArray[i], i);
-      } else {
-        console.log("about to put " + 0 + " in a buffer");
-        buf.writeUInt8(0, i);
-      }
-    }
-
-    // send serial data to arduino
-    serialPort.write(buf, function(err, results) {
-      console.log('err ' + err);
-      console.log('results ' + results);
-    });
-
-    setTimeout(makeRequest, 50);
-  };
-
-  var reqCallback = function(res){
-    console.log('STATUS: ' + res.statusCode);
-    console.log('HEADERS: ' + JSON.stringify(res.headers));
-    res.setEncoding('utf8');
-    res.on('data', onReqData);
-  };
-
-  function constrain(a,n,x){
-    return (a <= n ? n : (a >= x ? x : a));
-  }
-
-  function makeRequest() {
-    var req = http.request(options, reqCallback);
-
-    req.on('error', function(e) {
-      console.log('problem with request: ' + e.message);
-    });
-    req.end();
-    if(demomode) {
-      onReqData("{\"attention\": " + constrain(stateOfMind.attention + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," + 
-                     "\"meditation\": " + constrain(stateOfMind.meditation + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," + 
-                     "\"bored\": " + constrain(stateOfMind.bored + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," +
-                     "\"frust\": " + constrain(stateOfMind.frust + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," +
-                     "\"med\": " + constrain(stateOfMind.med + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," +
-                     "\"excite\": " + constrain(stateOfMind.excite + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "}")
+  var buf = new Buffer(36);
+  for (var i = 0; i < 36; i++) {
+    if (rgbArray[i]) {
+  //        console.log("about to put " + rgbArray[i] + " in a buffer");
+      buf.writeUInt8(rgbArray[i], i);
+    } else {
+  //        console.log("about to put " + 0 + " in a buffer");
+      buf.writeUInt8(0, i);
     }
   }
+  console.log(buf);
 
-  // makeRequest();
+  // send serial data to arduino
+  serialPort.write(buf, function(err, results) {
+    console.log('BEAR err ' + err);
+    console.log('results ' + results);
+  });
 
+  setTimeout(makeRequest, 50);
+}
+
+var reqCallback = function(res){
+  console.log('STATUS: ' + res.statusCode);
+  console.log('HEADERS: ' + JSON.stringify(res.headers));
+  res.setEncoding('utf8');
+  res.on('data', onReqData);
+}
+
+function constrain(a,n,x){
+  return (a <= n ? n : (a >= x ? x : a));
+}
+
+function makeRequest() {
+  console.log("makeRequest Entered")
+  var req = http.request(options, reqCallback);
+
+  req.on('error', function(e) {
+    console.log('problem with request: ' + e.message);
+  });
+  req.end();
+  if(demomode) {
+    onReqData(    "{\"attention\": " + constrain(stateOfMind.attention + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," + 
+		   "\"meditation\": " + constrain(stateOfMind.meditation + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," + 
+		   "\"bored\": " + constrain(stateOfMind.bored + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," +
+		   "\"frust\": " + constrain(stateOfMind.frust + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," +
+		   "\"med\": " + constrain(stateOfMind.med + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "," +
+		   "\"excite\": " + constrain(stateOfMind.excite + (Math.random() <= 0.5 ? -0.05 : 0.05), 0.0, 0.75) + "}")
+  }
+}
+
+  makeRequest();
 };
 
 serialPort.open(init, false);
