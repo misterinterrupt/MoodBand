@@ -4,12 +4,12 @@ var serialPort = new SerialPort("/dev/tty.usbserial-A102JUY2", {
    baudrate: 57600
   }, true); // this is the openImmediately flag [default is true]
 
-var headset = 'neurosky';
+var headset = 'emotiv';
 var demomode = false;
 
 var http = require('http')
 var net = require('net')
-var serverIP = '10.0.1.86'
+var serverIP = '127.0.0.1'
 var socketIP = '127.0.0.1'
 var serverPort = '80'
 var socketPort = '13854'
@@ -82,6 +82,7 @@ var stateOfMind = {"attention": 0,
 
 function updateStateOfMind(json) {
   console.log("updateStateOfMind Entered")
+  console.log(json);
   // All values vary over (0, 1)
   if(json.eSense){
     if (json.eSense.attention) {
@@ -174,7 +175,7 @@ function pixelsFromEmotiv() {
 }
 
 var init = function () {
-  console.log('serial port open at 57600');
+  //console.log('serial port open at 57600');
 
   var options = {
     hostname: serverIP,
@@ -184,7 +185,7 @@ var init = function () {
   };
 
 var onReqData = function(chunk) {
-  console.log("reqData Entered")
+  //console.log("reqData Entered")
   var dat = JSON.parse(chunk);
   updateStateOfMind(dat);
 
