@@ -26,6 +26,9 @@ var sockParams = {
       "format": "Json"
     }
 var sockBuffer = ""
+function constrain(a,n,x){
+  return (a <= n ? n : (a >= x ? x : a));
+}
                                                                                               
 var onSocketData = function onSocketData(data) {
   console.log("onSOcketData Entered")
@@ -112,8 +115,8 @@ function pixelsFromMindwave() {
   //attention is yellow, meditation is blue
   //one pixel is always lit
   var pixels = [];
-  var attentionPixels = 6 * stateOfMind.attention;
-  var meditationPixels = 6 * stateOfMind.meditation;
+  var attentionPixels = 6 * stateOfMind.excite;
+  var meditationPixels = 6 * stateOfMind.med;
   for (var i = 0; i < attentionPixels; i++) {
     pixels[i * 3] = 127;
     pixels[i * 3 + 1] = 127;
@@ -145,19 +148,19 @@ function pixelsFromEmotiv() {
 
   for (var i = 0; i < 3; i++) {
     pixels[i * 3] = 0;
-    pixels[i * 3 + 1] = Math.floor(Math.max(10, stateOfMind.bored * 255));
+    pixels[i * 3 + 1] = Math.floor(constrain((stateOfMind.bored * 1.5 - .25) * 255), 0, 254);
     pixels[i * 3 + 2] = 0;
 
-    pixels[9 + i * 3] = Math.floor(Math.max(10, stateOfMind.frust * 255));
+    pixels[9 + i * 3] = Math.floor(constrain((stateOfMind.frust * 1.5 - .25) * 255), 0, 254);
     pixels[9 + i * 3 + 1] = 0;
     pixels[9 + i * 3 + 2] = 0;
 
     pixels[18 + i * 3] = 0;
     pixels[18 + i * 3 + 1] = 0;
-    pixels[18 + i * 3 + 2] = Math.floor(Math.max(10, stateOfMind.med * 255));
+    pixels[18 + i * 3 + 2] = Math.floor(constrain((stateOfMind.med * 1.5 - .25) * 255), 0, 254);
  
-    pixels[27 + i * 3] = Math.floor(Math.max(5, (stateOfMind.excite * 255) / 2));
-    pixels[27 + i * 3 + 1] = Math.floor(Math.max(5, (stateOfMind.excite * 255) / 2));
+    pixels[27 + i * 3] = Math.floor(constrain((stateOfMind.excite * 1.5 - .25) * 255 / 2, 0, 127));
+    pixels[27 + i * 3 + 1] = Math.floor(constrain((stateOfMind.excite * 1.5 - .25) * 255 / 2, 0, 127));
     pixels[27 + i * 3 + 2] = 0;
   }
 
@@ -190,7 +193,7 @@ var onReqData = function(chunk) {
   updateStateOfMind(dat);
 
   var rgbArray; // will be 36 long for the 12px face
-  if (headset === 'neurosky') { //hardcoded at top
+  if (true ||  headset === 'neurosky') { //hardcoded at top
     rgbArray = pixelsFromMindwave();
   } else if (headset === 'emotiv') {
     rgbArray = pixelsFromEmotiv();
@@ -226,9 +229,6 @@ var reqCallback = function(res){
   res.on('data', onReqData);
 }
 
-function constrain(a,n,x){
-  return (a <= n ? n : (a >= x ? x : a));
-}
 
 function makeRequest() {
   console.log("makeRequest Entered")
