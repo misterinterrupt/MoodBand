@@ -37,21 +37,29 @@ var SYNC_BYTE = 0xaa,
     ASIC_EEG_BYTE = 0x83;
 
   var processBuffer = function processBuffer(rawData) {
-
+    
+    console.log("processing");
     var rawEegTimeSent = (new Date()).getTime();
     var payLoadLength, packet, checkSum, checkSumExpected, parsedData, rawEeg, eegTick,
         payLoad, extendedCodeLevel, code, bytesParsed, dataLength, dataValue;
 
     for (var i = 0, l = rawData.length; i < l; i++) {
+      console.log("rawData.length ", rawData.length + "\n");
 
       if (typeof rawData[i] === 'undefined' || typeof rawData[i+1] === 'undefined' || typeof rawData[i+2] === 'undefined') {
         return;
       }
 
-      payLoadLength = parseInt(rawData[i+2],10);
+      //console.log(rawData.readUInt8(i).toString(16) + " - " + rawData.readUInt8(i+1).toString(16) + " " + rawData.readUInt8(i+2).toString(16));
+
+      payLoadLength = parseInt(socket.bytesRead, 10) - 5;
+      console.log("iteration " + i + " with payLoadLength " + payLoadLength);
+
       if (rawData[i] === SYNC_BYTE && rawData[i+1] === SYNC_BYTE && payLoadLength < 170) {
 
-        packet = rawData.slice(i, i + payLoadLength + 4);
+        console.log("slicing packet at "+ i + "for " + (i + payLoadLength + 5));
+        packet = rawData.slice(i, i + payLoadLength + 5);
+
         checkSumExpected = packet[packet.length - 1];
         payLoad = packet.slice(3, -1);
         checkSum = 0;
@@ -60,9 +68,10 @@ var SYNC_BYTE = 0xaa,
         checkSum &= 0xFF;
         checkSum = ~checkSum & 0xFF;
 
-        console.log('checkSum: ', checkSum);
-        console.log('checkSumExpected: ', checkSumExpected);
-        if (checkSum === checkSumExpected) {
+        // console.log('checkSum: ', checkSum);
+        // console.log('checkSumExpected: ', checkSumExpected);
+
+        if (true) {
           bytesParsed = 0;
           parsedData = {};
           while (bytesParsed < payLoadLength) {
@@ -71,7 +80,7 @@ var SYNC_BYTE = 0xaa,
               extendedCodeLevel++; bytesParsed++;
             }
             code = payLoad[bytesParsed++];
-
+            console.log("code: ", code.toString(16));
             dataLength = code & 0x80 ? payLoad[bytesParsed++] : 1;
             if (dataLength === 1) {
               dataValue = payLoad[bytesParsed];
@@ -84,6 +93,8 @@ var SYNC_BYTE = 0xaa,
             }
             bytesParsed += dataLength;
 
+            console.log("dataValue: " + dataValue);
+            
             if (extendedCodeLevel === 0) {
               switch (code) {
                 case POOR_SIGNAL_BYTE:
@@ -137,8 +148,8 @@ var SYNC_BYTE = 0xaa,
 
   }
 
-  var onSocketData = function onSocketData(data) {
-      
+  var onSocketData = function onSocketData( data ) {
+
       // var sockOptsString = JSON.stringify(sockParams);
       // console.log(sockOptsString, sockOptsString.length);
       // var optsBuff = new Buffer(sockOptsString.length);
@@ -148,44 +159,59 @@ var SYNC_BYTE = 0xaa,
       // console.log("optsBuff: ", optsBuff);
       // socket.write(optsBuff);
 
-      console.log(data);
-      // stuff to add to the last one or garbage
-      // stuff that is in the next one
-      var last2Sync = null;
-      for(var i=0; i < data.length; i++) {
-        // if we see a double sync
-        if(data[i] === SYNC_BYTE && data[i+1] === SYNC_BYTE) {
-          last2Sync = i;
-        }
-      } 
+      processBuffer(data);
+      // // stuff to add to the last one or garbage
+      // // stuff that is in the next one
+      // var last2Sync = null;
+      // for(var i=0; i < data.length; i++) {
+      //   // console.log("data["+i+"] = ", data[i]);
+      //   // console.log("data["+(i+1)+"] = ", data[i+1]);
+      //   // console.log("SYNC_BYTE: ", SYNC_BYTE);
+      //   // if we see a double sync
+      //   if((data[i] === SYNC_BYTE) && (data[i+1] === SYNC_BYTE)) {
+      //     last2Sync = i;
+      //   }
+      // }
+      // console.log("last2Sync: " + last2Sync);
 
-      // if the last sync bytes were at the beginning, save the whole thing as the last buffer
-      if(last2Sync === 0) {
-        lastBuffer = data;
-        return
-      }
-      // if there were no sync bytes, make one buffer and concat it to the last buffer
-      if(last2Sync === null) {
-        lastBuffer = lastBuffer.concat(data);
-        return;
-      }
-      // make two or more buffers from splitting on any sync bytes
-      var splitskies = data.split(last2Sync);
-      // if there are 2 buffers, concat the first to the last buffer and parse it
-      if(splitskies.length > 1) {
-        for(var j=0; j<splitskies.length; j++) {
-          if(j===0) {
-            lastBuffer = lastBuffer.concat(splitskies[j]);
-            processBuffer(lastBuffer);
-          }
-          // save the last one in the next buffer
-          if(j===splitskies.length-1) {
-            nextBuffer = splitskies[j];
-          }
-          // other (probably smaller) packets should be processed
-          processBuffer(splitskies[j]);
-        }
-      }
+      // // if the last sync bytes were at the beginning, save the whole thing as the last buffer
+      // if(last2Sync === 0) {
+      //   lastBuffer = data;
+      //   return;
+      // }
+
+
+      // // if there were no sync bytes, make one buffer and concat it to the last buffer
+      // if(last2Sync === null) {
+      //   lastBuffer = lastBuffer.concat(data);
+      //   return;
+      // }
+
+      // // check if lastbuffer has a sync byte
+      // if()
+
+      // // make two or more buffers from splitting on any sync bytes
+      // var splitskies = data.split(last2Sync);
+
+      // // if there are 2 buffers, concat the first to the last buffer and parse it
+      // console.log("splitskies: ", splitskies);
+
+      // if(splitskies.length > 1) {
+      //   for(var j=0; j<splitskies.length; j++) {
+      //     if(j===0) {
+      //       lastBuffer = lastBuffer.concat(splitskies[j]);
+      //       processBuffer(lastBuffer);
+      //     }
+      //     // save the last one in the next buffer
+      //     if(j===splitskies.length-1) {
+      //       nextBuffer = splitskies[j];
+      //     }
+      //     // other (probably smaller) packets should be processed
+      //     processBuffer(splitskies[j]);
+      //   }
+      // } else {
+      //   processBuffer(splitskies[0]);
+      // }
     },
     onSocketConnect = function onSocketConnect() {
       //'connect' listener

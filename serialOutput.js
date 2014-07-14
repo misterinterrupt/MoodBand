@@ -1,30 +1,41 @@
 var SerialPort = require("serialport").SerialPort;
-var serialPort = new SerialPort("/dev/cu.usbserial-A102JUZE", {
+var serialPort = new SerialPort("/dev/tty.MindWaveMobile-DevA", {
   baudrate: 57600
 });
 
 
 serialPort.on("open", function () {
+
   console.log('open');
 
   serialPort.on('data', function(data) {
-//    console.log('data received: ' + data);
+
+	var intz="", b;
+	for (ii = 0; ii < data.length; ii++) {
+
+		b = data.readUInt8(ii).toString(16);
+		if(typeof b !== "undefined") {
+			intz += b + " ";
+		}
+	}
+    console.log('data received: ' + intz);
   });
 
   serialPort.write('255', function(err, results) {
+
     console.log('err ' + err);
     console.log('results ' + results);
   });
 });
 
-var colorVals = [0x00,0x20,0x80,0xFF];
+// var colorVals = [0x00,0x20,0x80,0xFF];
 
-var buf = new Buffer(4);
-buf.writeUInt8(colorVals[0],0);
-buf.writeUInt8(colorVals[1],1);
-buf.writeUInt8(colorVals[2],2);
-buf.writeUInt8(colorVals[3],3);
-serialPort.write(buf);
+// var buf = new Buffer(4);
+// buf.writeUInt8(colorVals[0],0);
+// buf.writeUInt8(colorVals[1],1);
+// buf.writeUInt8(colorVals[2],2);
+// buf.writeUInt8(colorVals[3],3);
+// serialPort.write(buf);
 
 // test function doesn't work yet
 /*
